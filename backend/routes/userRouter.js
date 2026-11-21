@@ -14,7 +14,6 @@ const isAuth = require("./auth").isAuth;
 
 //POST routes
 router.post("/register", registerUser);
-router.post("/profiles", createProfile);
 router.post("/login", loginUser);
 
 //GET Routes
@@ -22,7 +21,7 @@ router.get("/login-success", isAuth, getUser);
 router.get("/logout", logoutUser);
 
 //Profile Routes
-router.route("/profiles").get(isAuth, getProfile).post(createProfile)
+router.route("/profiles").get(isAuth, getProfile).post(isAuth, createProfile)
 router.route("/profiles/:id").get(isAuth, getProfileById).put(isAuth, updateProfile);
 
 

@@ -1,11 +1,9 @@
 const Job = require("../models/jobModel");
-const User = require("../models/userModel");
 
 //@desc Get all jobs
 //@route GET /jobs
 //@access Private
 const getJobs = async (req, res) => {
-  console.log(req.user);
   try {
     const jobs = await Job.find({ user: req.user._id });
     res.status(200).send(jobs);
@@ -19,7 +17,9 @@ const getJobs = async (req, res) => {
 //@access Private
 const getJobById = async (req, res) => {
   try {
-    const job = await Job.findById(req.params.id);
+    const filter = { _id: req.params.id, user: req.user._id };
+    const job = await Job.findOne(filter);
+    if (!job) return res.sendStatus(404);
     res.status(200).send(job);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -74,24 +74,21 @@ const createJob = async (req, res) => {
 //@access Private
 const updateJob = async (req, res) => {
   try {
-    const job = await Job.findById(req.params.id);
-    if (!job) {
-      res.status(400).json({ message: "Job not found" });
-    }
-
-    const user = await User.findById(req.user._id);
-
-    if (!user) {
-      res.status(401).json({ message: "User not found" });
-    }
-
-    // if (Job.user.toString() !== req.user._id.toString()) {
-    //   res.status(401).json({ message: "Not authorized" });
-    // }
-
-    const updatedJob = await Job.findByIdAndUpdate(req.params.id, req.body, {
+    const fields = [
+      "companyName", "jobTitle", "salary", "listingLink", "companyLocation",
+      "contactName", "contactEmail", "contactPhone", "trackerStatus",
+      "dateApplied", "trackerResume", "trackerTimestamp", "followUp", "favorite",
+    ];
+    const updates = Object.fromEntries(
+      fields.filter((field) => Object.prototype.hasOwnProperty.call(req.body, field))
+        .map((field) => [field, req.body[field]])
+    );
+    const filter = { _id: req.params.id, user: req.user._id };
+    const updatedJob = await Job.findOneAndUpdate(filter, { $set: updates }, {
       new: true,
+      runValidators: true,
     });
+    if (!updatedJob) return res.sendStatus(404);
     res.status(200).send(`Job ${updatedJob.jobTitle} has been updated`);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -103,11 +100,9 @@ const updateJob = async (req, res) => {
 //@access Private
 const deleteJob = async (req, res) => {
   try {
-    const job = await Job.findById(req.params.id);
-    if (!job) {
-      res.status(400).json({ message: "Job not found" });
-    }
-    await Job.findByIdAndDelete(req.params.id);
+    const filter = { _id: req.params.id, user: req.user._id };
+    const job = await Job.findOneAndDelete(filter);
+    if (!job) return res.sendStatus(404);
     res.status(200).send(`Job ${job.title} has been deleted`);
   } catch (err) {
     res.status(500).json({ message: err.message });

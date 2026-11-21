@@ -63,7 +63,8 @@ const createProfile = (req, res) => {
 
 const getProfileById = async (req, res) => {
   try {
-    const profile = await Profile.findById(req.params.id);
+    const profile = await Profile.findOne({ _id: req.params.id, user: req.user._id });
+    if (!profile) return res.sendStatus(404);
     res.status(200).send(profile);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -72,20 +73,17 @@ const getProfileById = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const profile = await Profile.findById(req.params.id);
-    if (!profile) {
-      res.status(400).json({ message: "Profile not found" });
-    }
-
-    const user = await User.findById(req.user._id);
-
-    if (!user) {
-      res.status(401).json({ message: "User not found" });
-    }
-
-    const updatedProfile = await Profile.findByIdAndUpdate(req.params.id, req.body, {
+    const fields = ["firstName", "lastName", "weeklyAppGoal"];
+    const updates = Object.fromEntries(
+      fields.filter((field) => Object.prototype.hasOwnProperty.call(req.body, field))
+        .map((field) => [field, req.body[field]])
+    );
+    const filter = { _id: req.params.id, user: req.user._id };
+    const updatedProfile = await Profile.findOneAndUpdate(filter, { $set: updates }, {
       new: true,
+      runValidators: true,
     });
+    if (!updatedProfile) return res.sendStatus(404);
     res.status(200).send(`Profile ${updatedProfile.firstName} has been updated`);
   } catch (err) {
     res.status(500).json({ message: err.message });
